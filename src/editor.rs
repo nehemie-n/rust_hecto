@@ -1,34 +1,44 @@
-use std::io::{self, stdout};
+use std::io::{self, stdout, Error};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 
-fn die(e: std::io::Error) {
-    panic!("{:?}", e);
+fn die(e: &Error) {
+    panic!("{e:?}");
 }
 
 pub struct Editor {}
 
 impl Editor {
     pub fn default() -> Self {
-        Editor {}
+        Self {}
     }
 
     pub fn run(&self) {
         let _stdout = stdout().into_raw_mode().unwrap();
-
-        for key in io::stdin().keys() {
-            match key {
-                Ok(key) => match key {
-                    Key::Char(c) => {
-                        println!("{}\r", c);
-                    }
-                    Key::Ctrl('q') => break,
-                    Key::Esc => break,
-                    _ => println!("{:?}\r", key),
-                },
-                Err(err) => die(err),
+        loop {
+            if let Err(error) = self.process_keypress() {
+                die(&error);
             }
         }
     }
+
+    fn process_keypress(&self) -> Result<(), std::io::Error> {
+        let pressed_key = self.read_key()?;
+        match pressed_key {
+            Key::Ctrl('q') | Key::Esc => panic!("Program End"),
+            _ => (),
+        };
+        Ok(())
+    }
+
+    fn read_key(&self) -> Result<Key, std::io::Error> {
+        loop {
+            if let Some(key) = io::stdin().lock().keys().next() {
+                return key;
+            }
+        }
+    }
+    
 }
+
